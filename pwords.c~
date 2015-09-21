@@ -263,7 +263,7 @@ main( int argc, char *argv[] ) {
 
 	int status;
 	pthread_t prod; //producer thread
-	pthread_t coms[4]; //consumer threads - 4 created
+	pthread_t cons[4]; //consumer threads - 4 created
 	darg_t ddarg[4];
 
 	void *ret;
@@ -318,6 +318,7 @@ main( int argc, char *argv[] ) {
 		if((dic = pthread_join(cons[i],&ret))!= 0){
 			printf("Error in join consumer thread");		
 		}
+		print_dict(dic);
 	}
 
 	if((dic = pthread_mutex_destroy(&dic->flaglock)) != 0){

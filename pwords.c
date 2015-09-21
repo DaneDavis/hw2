@@ -318,6 +318,7 @@ main( int argc, char *argv[] ) {
 		if((dic = pthread_join(cons[i],&ret))!= 0){
 			printf("Error in join consumer thread");		
 		}
+		print_dict(dic);
 	}
 
 	if((dic = pthread_mutex_destroy(&dic->flaglock)) != 0){
