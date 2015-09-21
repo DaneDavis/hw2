@@ -20,12 +20,14 @@ typedef struct dict{ //used similarly to sharedobject
 
 ////////////////////////////////////////////////////////////
 
-typedef struct darg{
+typedef struct darg{ //As created in lectures 
+																					//To be used by consumer
 	long did;
 	dict_t *diptr;
 }darg_t;
 
 ///////////////////////////////////////////////////////////
+
 /*Makes a nessecary word used in dict struct*/
 char *
 make_word( char *word ) {
@@ -116,6 +118,7 @@ words( FILE *infile ) {
   while( get_word( wordbuf, MAXWORD, infile ) ) {
     wd = insert_word(wd, wordbuf); // add to dict
   }
+		wd->flag = false;
   return wd;
 }
 
@@ -141,6 +144,7 @@ waittilltrue(dict_t *dic, int did){
 
 ///////////////////////////////////////////////////////////
 
+/*waits until dict->flag = false*/
 bool
 waittillfalse(dict_t *dic, int did){
 	int status;
@@ -160,6 +164,7 @@ waittillfalse(dict_t *dic, int did){
 
 ///////////////////////////////////////////////////////////
 
+/*unlocks mutex lock*/
 int releasetrue(dict_t *dic, int did){
 	dic->flag = true;
 	printf("DID %d set true \n",did);
@@ -170,6 +175,7 @@ int releasetrue(dict_t *dic, int did){
 
 ///////////////////////////////////////////////////////////
 
+/*locks mutex lock*/
 int releasefalse(dict_t *dic, int did){
 	dic->flag = false;
 	printf("DID %d set false \n",did);
@@ -230,7 +236,7 @@ consumer(void *arg){
 		printf("Error in consumer");
 	}
 
-	printf("Cons %ld: [%d:%d] %s",did,i);
+	printf("Cons %ld:%d",did,i);
 
 	release_exit(dic,did);
 	*ret = i;
@@ -242,7 +248,7 @@ consumer(void *arg){
 
 int
 main( int argc, char *argv[] ) {
-  dict_t *d = NULL;
+  /*dict_t *d = NULL;
   FILE *infile = stdin;
   if (argc >= 2) {
     infile = fopen (argv[1],"r");
@@ -253,7 +259,82 @@ main( int argc, char *argv[] ) {
   }
   d = words( infile );
   print_dict( d );
-  fclose( infile );
+  fclose( infile );*/
+
+	int status;
+	pthread_t prod; //producer thread
+	pthread_t coms[4]; //consumer threads - 4 created
+	darg_t ddarg[4];
+
+	void *ret;
+	dict_t *dic = malloc(sizeof(dict_t));
+
+	dic = NULL;
+	FILE *infile = stdin;
+
+	 if (argc >= 2) {
+    infile = fopen (argv[1],"r");
+  }
+  if( !infile ) {
+    printf("Unable to open %s\n",argv[1]);
+    exit( EXIT_FAILURE );
+  }
+
+	dic = words(infile);
+	
+	if((dic = pthread_mutex_init(&dic->flaglock,NULL)) != 0){
+		printf("Error mutex init");	
+	}
+
+	if((dic = pthread_cond_init(&dick->flag_true,NULL)) != 0){
+		printf("Error cond init true");
+	}
+
+	if((dic = pthread_cond_init(&dic->flag_false,NULL)) != 0){
+		printf("Error cond init false");
+	}
+
+	if((dic = pthread_create(&prod,NULL,producer,(void *)dic)) != 0){
+		printf("Error in creating producer thread");
+	}
+
+	for(int i =0;i<4;i++){
+		ddarg[i].did = i;
+		ddarg[i].diptr = dic;
+
+		if((dic = pthread_create(&cons[i],NULL,consumer,&ddarg[i])) != 0){
+			printf("Error in creating consumer thread");
+		}
+	}
+	
+
+	printf("Producer and consumer threads created successfully");
+
+	if((dic = pthread_join(prod,&ret)) != 0){
+		printf("Error in join producer thread");
+	}
+
+	for(int i =0;i<4;i++){
+		if((dic = pthread_join(cons[i],&ret))!= 0){
+			printf("Error in join consumer thread");		
+		}
+	}
+
+	if((dic = pthread_mutex_destroy(&dic->flaglock)) != 0){
+		printf("Error in destroy mutex");	
+	}
+
+	if((dic = pthread_cond_destroy(&dic->flag_true))!= 0){
+		printf("Error in destroy flag true");
+	}
+
+	if((dic = pthread_cond_destroy(&dic->flag_false)) != 0){
+		printf("Error in destroy flag false");
+	}
+
+	free(dic);
+	pthread_exit(NULL);
+
 }
 
 ///////////////////////////////////////////////////////////
