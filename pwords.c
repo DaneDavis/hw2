@@ -286,7 +286,7 @@ main( int argc, char *argv[] ) {
 		printf("Error mutex init");	
 	}
 
-	if((dic = pthread_cond_init(&dick->flag_true,NULL)) != 0){
+	if((dic = pthread_cond_init(&dic->flag_true,NULL)) != 0){
 		printf("Error cond init true");
 	}
 
