@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 
 typedef struct dict{ //used similarly to sharedobject 
@@ -14,7 +15,7 @@ typedef struct dict{ //used similarly to sharedobject
 
  pthread_mutex_t flaglock;//mutex for flag
  pthread_cond_t flag_true;//variable for flag=true
-	pthread_cond_t flag_false;//variable for flag=false
+ pthread_cond_t flag_false;//variable for flag=false
 
 } dict_t;//Name of shared object type
 
@@ -180,7 +181,7 @@ int releasefalse(dict_t *dic, int did){
 	dic->flag = false;
 	printf("DID %d set false \n",did);
 	pthread_cond_signal(&dic->flag_false);
-	return(pthread_mutex_lock(&dic->flaglock));
+	return(pthread_mutex_unlock(&dic->flaglock));
 }
 
 ///////////////////////////////////////////////////////////
@@ -201,12 +202,12 @@ producer(void *arg){
 	int i = 0;
 	char *line; //next line
 	printf("Producer starting\n"); //Used for testing can remove later
-	while((line = words(dic->next))){
+	while((line = dic->word)){
 		waittillfalse(dic,PROD_ID); //wait till flag is flase
 		dic->count = i++;
 		dic->word = line; //line into shared buffer
 
-		fprintf(stdout,"Prod: [%d] %s",i,line);
+		fprintf(stdout,"Prod: [%d] %s \n",i,line);
 
 		if((status = releasetrue(dic,PROD_ID)) != 0){
 			printf("Error in producer");		
@@ -230,11 +231,12 @@ consumer(void *arg){
 
 	while(waittilltrue(dic,did) && (line = dic->word)){
 		len = strlen(line);
-		printf("Consumer %ld: [%d:%d] %s", did,i++,dic->count,line);
+		printf("Consumer %ld: [%d:%d] %s\n", did,i++,dic->count,line);
 
 	if((status = releasefalse(dic,did))!= 0){
 		printf("Error in consumer");
 	}
+	
 
 	printf("Cons %ld:%d",did,i);
 
@@ -248,18 +250,6 @@ consumer(void *arg){
 
 int
 main( int argc, char *argv[] ) {
-  /*dict_t *d = NULL;
-  FILE *infile = stdin;
-  if (argc >= 2) {
-    infile = fopen (argv[1],"r");
-  }
-  if( !infile ) {
-    printf("Unable to open %s\n",argv[1]);
-    exit( EXIT_FAILURE );
-  }
-  d = words( infile );
-  print_dict( d );
-  fclose( infile );*/
 
 	int status;
 	pthread_t prod; //producer thread
@@ -272,69 +262,78 @@ main( int argc, char *argv[] ) {
 	dic = NULL;
 	FILE *infile = stdin;
 
-	 if (argc >= 2) {
-    infile = fopen (argv[1],"r");
+	if (argc >= 2) {
+   	infile = fopen (argv[1],"r");
   }
   if( !infile ) {
     printf("Unable to open %s\n",argv[1]);
     exit( EXIT_FAILURE );
   }
 
-	dic = words(infile);
-	
-	if((dic = pthread_mutex_init(&dic->flaglock,NULL)) != 0){
+
+	dic = words(infile); //possibly later
+
+	/*check creation of producer thread*/
+	if((status = pthread_mutex_init(&dic->flaglock,NULL)) != 0){
 		printf("Error mutex init");	
 	}
 
-	if((dic = pthread_cond_init(&dic->flag_true,NULL)) != 0){
+	if((status = pthread_cond_init(&dic->flag_true,NULL)) != 0){
 		printf("Error cond init true");
 	}
 
-	if((dic = pthread_cond_init(&dic->flag_false,NULL)) != 0){
+	if((status = pthread_cond_init(&dic->flag_false,NULL)) != 0){
 		printf("Error cond init false");
 	}
 
-	if((dic = pthread_create(&prod,NULL,producer,(void *)dic)) != 0){
+	if((status = pthread_create(&prod,NULL,producer,(void *)dic)) != 0){
 		printf("Error in creating producer thread");
 	}
 
+
+	/*loops 4 times to create 4 child proccesses*/
 	for(int i =0;i<4;i++){
 		ddarg[i].did = i;
 		ddarg[i].diptr = dic;
 
-		if((dic = pthread_create(&cons[i],NULL,consumer,&ddarg[i])) != 0){
+		if((status = pthread_create(&cons[i],NULL,consumer,&ddarg[i])) != 0){
 			printf("Error in creating consumer thread");
 		}
 	}
 	
 
-	printf("Producer and consumer threads created successfully");
+	printf("Producer and consumer threads created successfully\n");
 
-	if((dic = pthread_join(prod,&ret)) != 0){
+
+	if((status = pthread_join(prod,&ret)) != 0){
 		printf("Error in join producer thread");
 	}
 
+
 	for(int i =0;i<4;i++){
-		if((dic = pthread_join(cons[i],&ret))!= 0){
+		if((status = pthread_join(cons[i],&ret))!= 0){
 			printf("Error in join consumer thread");		
 		}
 		print_dict(dic);
 	}
 
-	if((dic = pthread_mutex_destroy(&dic->flaglock)) != 0){
+	if((status = pthread_mutex_destroy(&dic->flaglock)) != 0){
 		printf("Error in destroy mutex");	
 	}
 
-	if((dic = pthread_cond_destroy(&dic->flag_true))!= 0){
+	if((status = pthread_cond_destroy(&dic->flag_true))!= 0){
 		printf("Error in destroy flag true");
 	}
 
-	if((dic = pthread_cond_destroy(&dic->flag_false)) != 0){
+	if((status = pthread_cond_destroy(&dic->flag_false)) != 0){
 		printf("Error in destroy flag false");
 	}
 
 	free(dic);
 	pthread_exit(NULL);
+
+	print_dict( dic );
+  fclose( infile );
 
 }
 
